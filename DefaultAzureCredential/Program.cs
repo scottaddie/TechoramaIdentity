@@ -1,0 +1,79 @@
+using Azure;
+using Azure.Core.Diagnostics;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using Microsoft.Extensions.Azure;
+using System.Diagnostics.Tracing;
+
+var builder = WebApplication.CreateBuilder(args);
+
+//builder.Services.AddOpenApi();
+builder.Services.AddAzureClients(configureClients: c =>
+{
+    IConfigurationSection keyVaultConfig = builder.Configuration.GetSection("KeyVault");
+
+    // DEMO 1.1: Use implicit DAC
+    //c.AddSecretClient(keyVaultConfig);
+
+    // DEMO 1.2: Use implicit DAC w/ env var set in launchSettings.json
+    //TODO: this doesn't work because Microsoft.Extensions.Azure still uses an old version of Azure.Identity.
+    //TODO: Chris is working on a PR and will ship next week.
+    c.AddSecretClient(keyVaultConfig);
+
+    // DEMO 2: Use specific credential (VS)
+    //c.AddSecretClient(keyVaultConfig).WithCredential(new VisualStudioCredential());
+
+    // DEMO 3: Use specific credential for a different dev tool
+    //c.AddSecretClient(keyVaultConfig).WithCredential(new AzureCliCredential());
+
+
+});
+
+var app = builder.Build();
+
+//if (app.Environment.IsDevelopment())
+//{
+//    app.MapOpenApi();
+//}
+
+app.UseHttpsRedirection();
+
+app.MapGet("/Secret", async (SecretClient secretClient) =>
+{
+    try
+    {
+        string? credSelection = null;
+
+        using AzureEventSourceListener listener = new((args, message) =>
+        {
+            if (args is { EventSource.Name: "Azure-Identity", EventName: "DefaultAzureCredentialCredentialSelected" })
+            {
+                int index = message.IndexOf("Azure.Identity.");
+                credSelection = index >= 0 ? message.Substring(index + "Azure.Identity.".Length) : message;
+            }
+        }, EventLevel.Informational);
+
+        Response<KeyVaultSecret> secret = await secretClient.GetSecretAsync("MySecret");
+
+        return Results.Ok(new
+        {
+            Message = "Secret retrieved successfully",
+            SecretRetrieved = true,
+            SecretName = secret.Value.Name,
+            Timestamp = DateTime.UtcNow,
+            CredentialUsed = credSelection,
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(
+            title: "Failed to retrieve secret",
+            detail: ex.Message,
+            statusCode: 500
+        );
+    }
+});
+//.WithName("GetSecret")
+//.WithOpenApi();
+
+app.Run();

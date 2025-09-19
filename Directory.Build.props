@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Workaround for MSVC toolchain detection issues -->
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <!-- Skip MSVC version detection if it's causing issues -->
+    <VCToolsInstallDir Condition="'$(VCToolsInstallDir)' == ''">C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.44.35207\</VCToolsInstallDir>
+  </PropertyGroup>
+</Project>
