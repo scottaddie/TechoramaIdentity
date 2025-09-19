@@ -17,7 +17,7 @@ builder.Services.AddAzureClients(configureClients: c =>
 
     // DEMO 1.2: Use implicit DAC w/ env var set in launchSettings.json
     //TODO: this doesn't work because Microsoft.Extensions.Azure still uses an old version of Azure.Identity.
-    //TODO: Chris is working on a PR and will ship next week.
+    //TODO: Chris is working on a PR and will ship v1.13.0 next week (https://github.com/Azure/azure-sdk-for-net/pull/52733).
     c.AddSecretClient(keyVaultConfig);
 
     // DEMO 2: Use specific credential (VS)

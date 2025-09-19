@@ -1,10 +1,7 @@
 ﻿using Azure;
-using Azure.Core;
 using Azure.Identity;
 using Azure.Identity.Broker;
 using Azure.Security.KeyVault.Secrets;
-using Microsoft.Identity.Client;
-using Microsoft.Identity.Client.Broker;
 #if WINDOWS
 using SecretVaultApp.WinUI;
 #endif
@@ -43,31 +40,14 @@ public partial class MainPage : ContentPage
             Microsoft.UI.Xaml.Window? windowHandle = parentWindow?.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
             IntPtr hwnd = windowHandle != null ? WinRT.Interop.WindowNative.GetWindowHandle(windowHandle) : IntPtr.Zero;
 
-            // ===== MSAL =====
-            string[] scopes = ["https://vault.azure.net/.default"];
-
-            BrokerOptions options = new(BrokerOptions.OperatingSystems.Windows)
+            // Configure InteractiveBrowserCredentialBrokerOptions with parent window reference
+            InteractiveBrowserCredentialBrokerOptions options = new(hwnd)
             {
-                Title = "My Awesome Application",
+                UseDefaultBrokerAccount = true,
             };
 
-            IPublicClientApplication app = PublicClientApplicationBuilder
-                .Create("777b0380-bed8-46e5-83cd-a137ab47c667")
-                .WithTenantId("72f988bf-86f1-41af-91ab-2d7cd011db47")
-                .WithAuthority(AadAuthorityAudience.AzureAdMyOrg)
-                .WithBroker(options)
-                .WithParentActivityOrWindow(() => hwnd)
-                .WithDefaultRedirectUri()
-                .Build();
-
-            // Try to use the previously signed-in account from the cache
-            IEnumerable<IAccount> accounts = await app.GetAccountsAsync();
-            IAccount? existingAccount = accounts.FirstOrDefault();
-            AuthenticationResult result = existingAccount != null
-                ? await app.AcquireTokenSilent(scopes, existingAccount).ExecuteAsync()
-                : await app.AcquireTokenInteractive(scopes).ExecuteAsync();
-
-            TokenCredential credential = new MsalTokenCredential(result);
+            // Create credential that will use the broker on macOS
+            InteractiveBrowserCredential credential = new(options);
 #elif MACCATALYST
             // Get the parent window handle for MAUI on Mac Catalyst
             Microsoft.Maui.Controls.Window? parentWindow = this.GetParentWindow();
@@ -138,15 +118,4 @@ public partial class MainPage : ContentPage
             RetrieveSecretBtn.IsEnabled = true;
         }
     }
-}
-
-class MsalTokenCredential(AuthenticationResult authResult) : TokenCredential
-{
-    public override AccessToken GetToken(
-        TokenRequestContext requestContext, CancellationToken cancellationToken) =>
-            new AccessToken(authResult.AccessToken, authResult.ExpiresOn);
-
-    public override ValueTask<AccessToken> GetTokenAsync(
-        TokenRequestContext requestContext, CancellationToken cancellationToken) =>
-            new ValueTask<AccessToken>(new AccessToken(authResult.AccessToken, authResult.ExpiresOn));
 }
