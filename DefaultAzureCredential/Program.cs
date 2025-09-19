@@ -40,19 +40,26 @@ app.UseHttpsRedirection();
 
 app.MapGet("/Secret", async (SecretClient secretClient) =>
 {
+    string? credSelection = null;
+    List<string> messages = new();
+
+    using AzureEventSourceListener listener = new((args, message) =>
+    {
+        // Log all credentials attempted and the one selected
+        if (args is { 
+            EventSource.Name: "Azure-Identity",
+            EventName: "GetToken" or "GetTokenFailed" or "GetTokenSucceeded" or "DefaultAzureCredentialCredentialSelected"
+        })
+        {
+            if (args.EventName == "DefaultAzureCredentialCredentialSelected")
+                credSelection = ExtractCredentialName(message);
+            else
+                messages.Add(message);
+        }
+    }, EventLevel.Informational);
+
     try
     {
-        string? credSelection = null;
-
-        using AzureEventSourceListener listener = new((args, message) =>
-        {
-            if (args is { EventSource.Name: "Azure-Identity", EventName: "DefaultAzureCredentialCredentialSelected" })
-            {
-                int index = message.IndexOf("Azure.Identity.");
-                credSelection = index >= 0 ? message.Substring(index + "Azure.Identity.".Length) : message;
-            }
-        }, EventLevel.Informational);
-
         Response<KeyVaultSecret> secret = await secretClient.GetSecretAsync("MySecret");
 
         return Results.Ok(new
@@ -62,6 +69,7 @@ app.MapGet("/Secret", async (SecretClient secretClient) =>
             SecretName = secret.Value.Name,
             Timestamp = DateTime.UtcNow,
             CredentialUsed = credSelection,
+            CredentialChainAttempted = messages,
         });
     }
     catch (Exception ex)
@@ -71,6 +79,12 @@ app.MapGet("/Secret", async (SecretClient secretClient) =>
             detail: ex.Message,
             statusCode: 500
         );
+    }
+
+    static string ExtractCredentialName(string message)
+    {
+        int index = message.IndexOf("Azure.Identity.");
+        return index >= 0 ? message.Substring(index + "Azure.Identity.".Length) : message;
     }
 });
 //.WithName("GetSecret")
