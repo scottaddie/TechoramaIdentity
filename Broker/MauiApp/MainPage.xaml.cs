@@ -1,4 +1,5 @@
 ﻿using Azure;
+using Azure.Core.Diagnostics;
 using Azure.Identity;
 using Azure.Identity.Broker;
 using Azure.Security.KeyVault.Secrets;
@@ -10,6 +11,7 @@ using Foundation;
 using UIKit;
 #endif
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 
 namespace SecretVaultApp;
 
@@ -32,6 +34,18 @@ public partial class MainPage : ContentPage
         ErrorLabel.IsVisible = false;
         RetrieveSecretBtn.IsEnabled = false;
 
+        System.Text.StringBuilder sb = new();
+
+        using AzureEventSourceListener listener = new((args, message) =>
+        {
+            // DEMO 3: Show MSAL logs
+            if (args is {
+                EventSource.Name: "Azure-Identity",
+                EventName: "GetToken" or "GetTokenFailed" or "GetTokenSucceeded" //or "LogMsalInformational"
+            })
+                sb.AppendLine(message);
+        }, EventLevel.Informational);
+
         try
         {
 #if WINDOWS
@@ -43,7 +57,11 @@ public partial class MainPage : ContentPage
             // Configure InteractiveBrowserCredentialBrokerOptions with parent window reference
             InteractiveBrowserCredentialBrokerOptions options = new(hwnd)
             {
-                UseDefaultBrokerAccount = true,
+                // DEMO 1: Enable MSA accounts to show account picker
+                IsLegacyMsaPassthroughEnabled = true,
+
+                // DEMO 2: Enable silent flow w/ system default account
+                //UseDefaultBrokerAccount = true,
             };
 
             // Create credential that will use the broker on macOS
@@ -73,7 +91,8 @@ public partial class MainPage : ContentPage
             // Display the secret value (in production, be careful about displaying secrets)
             ResultLabel.Text = $"✅ Secret '{SecretName}' retrieved successfully!\n" +
                               $"🔑 Value: {secret.Value}\n" +
-                              $"📅 Created: {secret.Properties.CreatedOn:yyyy-MM-dd HH:mm:ss}";
+                              $"📅 Created: {secret.Properties.CreatedOn:yyyy-MM-dd HH:mm:ss}\n" +
+                              $"🔍 Logs:\n {sb}";
             ResultLabel.IsVisible = true;
 
             Debug.WriteLine($"Successfully retrieved secret: {SecretName}");
