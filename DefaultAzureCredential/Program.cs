@@ -7,7 +7,6 @@ using System.Diagnostics.Tracing;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.Services.AddOpenApi();
 builder.Services.AddAzureClients(configureClients: c =>
 {
     IConfigurationSection keyVaultConfig = builder.Configuration.GetSection("KeyVault");
@@ -25,19 +24,11 @@ builder.Services.AddAzureClients(configureClients: c =>
 
     // DEMO 3: Use specific credential for a different dev tool
     //c.AddSecretClient(keyVaultConfig).WithCredential(new AzureCliCredential());
-
-
 });
 
 var app = builder.Build();
 
-//if (app.Environment.IsDevelopment())
-//{
-//    app.MapOpenApi();
-//}
-
 app.UseHttpsRedirection();
-
 app.MapGet("/Secret", async (SecretClient secretClient) =>
 {
     string? credSelection = null;
@@ -46,7 +37,7 @@ app.MapGet("/Secret", async (SecretClient secretClient) =>
     using AzureEventSourceListener listener = new((args, message) =>
     {
         // Log all credentials attempted and the one selected
-        if (args is { 
+        if (args is {
             EventSource.Name: "Azure-Identity",
             EventName: "GetToken" or "GetTokenFailed" or "GetTokenSucceeded" or "DefaultAzureCredentialCredentialSelected"
         })
@@ -87,7 +78,5 @@ app.MapGet("/Secret", async (SecretClient secretClient) =>
         return index >= 0 ? message.Substring(index + "Azure.Identity.".Length) : message;
     }
 });
-//.WithName("GetSecret")
-//.WithOpenApi();
 
 app.Run();
