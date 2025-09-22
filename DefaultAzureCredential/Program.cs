@@ -11,13 +11,10 @@ builder.Services.AddAzureClients(configureClients: c =>
 {
     IConfigurationSection keyVaultConfig = builder.Configuration.GetSection("KeyVault");
 
-    // DEMO 1.1: Use implicit DAC
-    //c.AddSecretClient(keyVaultConfig);
-
-    // DEMO 1.2: Use implicit DAC w/ env var set in launchSettings.json
-    //TODO: this doesn't work because Microsoft.Extensions.Azure still uses an old version of Azure.Identity.
-    //TODO: Chris is working on a PR and will ship v1.13.0 next week (https://github.com/Azure/azure-sdk-for-net/pull/52733).
+    // DEMO 1: Use implicit DAC
     c.AddSecretClient(keyVaultConfig);
+
+    // DEMO 1.2: Use implicit DAC w/ env var set in launchSettings.json (requires Microsoft.Extensions.Azure 1.13.0 or later)
 
     // DEMO 2: Use specific credential (VS)
     //c.AddSecretClient(keyVaultConfig).WithCredential(new VisualStudioCredential());
