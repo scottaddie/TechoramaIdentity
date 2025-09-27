@@ -56,20 +56,40 @@ public partial class MainPage : ContentPage
             Microsoft.UI.Xaml.Window? windowHandle = parentWindow?.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
             IntPtr hwnd = windowHandle != null ? WinRT.Interop.WindowNative.GetWindowHandle(windowHandle) : IntPtr.Zero;
 
-            // Configure InteractiveBrowserCredentialBrokerOptions with parent window reference
-            InteractiveBrowserCredentialBrokerOptions options = new(hwnd)
-            {
-                #region "DEMO 1: Enable MSA accounts to show account picker"
-                IsLegacyMsaPassthroughEnabled = true,
-                #endregion
+            #region "DEMO 1: InteractiveBrowserCredential"
+            //// Configure InteractiveBrowserCredentialBrokerOptions with parent window reference
+            //InteractiveBrowserCredentialBrokerOptions options = new(hwnd)
+            //{
+            //    #region "DEMO 1.1: Enable MSA accounts to show account picker"
+            //    IsLegacyMsaPassthroughEnabled = true,
+            //    #endregion
 
-                #region "DEMO 2: Enable silent flow w/ system default account"
-                //UseDefaultBrokerAccount = true,
-                #endregion
+            //    #region "DEMO 1.2: Enable silent flow w/ system default account"
+            //    // Equivalent to using BrokerCredential via DAC
+            //    //UseDefaultBrokerAccount = true,
+            //    #endregion
+            //};
+
+            //// Create credential that will use the broker on Windows
+            //InteractiveBrowserCredential credential = new(options);
+            #endregion
+
+            #region "DEMO 2: BrokerCredential"
+            // 1. Explain that InteractiveBrowserCredential shows up in logs because BrokerCredential is derived from that class.
+            DefaultAzureCredentialOptions options = new()
+            {
+                ExcludeEnvironmentCredential = true,
+                ExcludeManagedIdentityCredential = true,
+                ExcludeWorkloadIdentityCredential = true,
+                ExcludeVisualStudioCredential = true,
+                ExcludeVisualStudioCodeCredential = true,
+                ExcludeAzureCliCredential = true,
+                ExcludeAzurePowerShellCredential = true,
+                ExcludeAzureDeveloperCliCredential = true,
             };
 
-            // Create credential that will use the broker on macOS
-            InteractiveBrowserCredential credential = new(options);
+            DefaultAzureCredential credential = new(options);
+            #endregion
 #elif MACCATALYST
             // Get the parent window handle for MAUI on Mac Catalyst
             Microsoft.Maui.Controls.Window? parentWindow = this.GetParentWindow();
