@@ -1,0 +1,5 @@
+﻿@IdentityPlayground.WebApi_HostAddress = https://localhost:7194
+
+GET {{IdentityPlayground.WebApi_HostAddress}}/Secret
+
+###

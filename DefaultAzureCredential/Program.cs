@@ -1,79 +1,48 @@
-using Azure;
-using Azure.Core.Diagnostics;
-using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Azure;
-using System.Diagnostics.Tracing;
+using IdentityPlayground.WebApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAzureClients(configureClients: c =>
 {
-    IConfigurationSection keyVaultConfig = builder.Configuration.GetSection("KeyVault");
+    IConfigurationSection keyVaultConfig = builder.Configuration.GetSection("Azure:KeyVault");
+    IConfigurationSection storageConfig = builder.Configuration.GetSection("Azure:Storage");
 
-    // DEMO 1: Use implicit DAC
+    #region "DEMO 1: Use implicit DAC"
+    // Send 1 request, then "%LOCALAPPDATA%\.IdentityService\msalV2.cache" is created, which is where the token is cached by MSAL.
+    // Stop API and send another request. The cache file is updated.
     c.AddSecretClient(keyVaultConfig);
+    #endregion
 
-    // DEMO 1.2: Use implicit DAC w/ env var set in launchSettings.json (requires Microsoft.Extensions.Azure 1.13.0 or later)
+    #region "DEMO 1.2: Use implicit DAC w/ env var in launchSettings.json"
+    // 1. Set env var to "dev" and explain why VisualStudioCredential is used.
+    // 2. Set env var to "VisualStudioCodeCredential" and explain why VSCodeCredential is used.
+    #endregion
 
-    // DEMO 2: Use specific credential (VS)
+    #region "DEMO 2: Use specific cred (VS)"
     //c.AddSecretClient(keyVaultConfig).WithCredential(new VisualStudioCredential());
+    #endregion
 
-    // DEMO 3: Use specific credential for a different dev tool
+    #region "DEMO 3: Use specific cred for a different dev tool"
     //c.AddSecretClient(keyVaultConfig).WithCredential(new AzureCliCredential());
+    #endregion
+
+    #region "DEMO 4: Validate value of AZURE_TOKEN_CREDENTIALS"
+    // 1. Change to invalid value to show exception.
+    //c.AddSecretClient(keyVaultConfig).WithCredential(
+    //    new DefaultAzureCredential(DefaultAzureCredential.DefaultEnvironmentVariableName));
+    #endregion
+
+    #region "DEMO 5: UseCredential with multiple clients"
+    //c.AddSecretClient(keyVaultConfig);
+    //c.AddBlobServiceClient(storageConfig);
+
+    //c.UseCredential(new DefaultAzureCredential(
+    //    DefaultAzureCredential.DefaultEnvironmentVariableName));
+    #endregion
 });
 
 var app = builder.Build();
-
 app.UseHttpsRedirection();
-app.MapGet("/Secret", async (SecretClient secretClient) =>
-{
-    string? credSelection = null;
-    List<string> messages = new();
-
-    using AzureEventSourceListener listener = new((args, message) =>
-    {
-        // Log all credentials attempted and the one selected
-        if (args is {
-            EventSource.Name: "Azure-Identity",
-            EventName: "GetToken" or "GetTokenFailed" or "GetTokenSucceeded" or "DefaultAzureCredentialCredentialSelected"
-        })
-        {
-            if (args.EventName == "DefaultAzureCredentialCredentialSelected")
-                credSelection = ExtractCredentialName(message);
-            else
-                messages.Add(message);
-        }
-    }, EventLevel.Informational);
-
-    try
-    {
-        Response<KeyVaultSecret> secret = await secretClient.GetSecretAsync("MySecret");
-
-        return Results.Ok(new
-        {
-            Message = "Secret retrieved successfully",
-            SecretRetrieved = true,
-            SecretName = secret.Value.Name,
-            Timestamp = DateTime.UtcNow,
-            CredentialUsed = credSelection,
-            CredentialChainAttempted = messages,
-        });
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem(
-            title: "Failed to retrieve secret",
-            detail: ex.Message,
-            statusCode: 500
-        );
-    }
-
-    static string ExtractCredentialName(string message)
-    {
-        int index = message.IndexOf("Azure.Identity.");
-        return index >= 0 ? message.Substring(index + "Azure.Identity.".Length) : message;
-    }
-});
-
+app.RegisterEndpoints();
 app.Run();

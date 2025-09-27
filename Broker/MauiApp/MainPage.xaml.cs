@@ -12,12 +12,13 @@ using UIKit;
 #endif
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
+using System.Text;
 
 namespace SecretVaultApp;
 
 public partial class MainPage : ContentPage
 {
-    private const string KeyVaultUrl = "https://kv-scaddie.vault.azure.net/";
+    private const string KeyVaultUrl = "https://kv-techorama2025.vault.azure.net/";
     private const string SecretName = "MySecret";
 
     public MainPage()
@@ -34,16 +35,17 @@ public partial class MainPage : ContentPage
         ErrorLabel.IsVisible = false;
         RetrieveSecretBtn.IsEnabled = false;
 
-        System.Text.StringBuilder sb = new();
+        StringBuilder sb = new();
 
         using AzureEventSourceListener listener = new((args, message) =>
         {
-            // DEMO 3: Show MSAL logs
+            #region "DEMO 3: Show MSAL logs"
             if (args is {
                 EventSource.Name: "Azure-Identity",
                 EventName: "GetToken" or "GetTokenFailed" or "GetTokenSucceeded" //or "LogMsalInformational"
             })
                 sb.AppendLine(message);
+            #endregion
         }, EventLevel.Informational);
 
         try
@@ -57,11 +59,13 @@ public partial class MainPage : ContentPage
             // Configure InteractiveBrowserCredentialBrokerOptions with parent window reference
             InteractiveBrowserCredentialBrokerOptions options = new(hwnd)
             {
-                // DEMO 1: Enable MSA accounts to show account picker
+                #region "DEMO 1: Enable MSA accounts to show account picker"
                 IsLegacyMsaPassthroughEnabled = true,
+                #endregion
 
-                // DEMO 2: Enable silent flow w/ system default account
+                #region "DEMO 2: Enable silent flow w/ system default account"
                 //UseDefaultBrokerAccount = true,
+                #endregion
             };
 
             // Create credential that will use the broker on macOS
