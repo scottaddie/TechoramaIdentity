@@ -90,6 +90,14 @@ public partial class MainPage : ContentPage
 
             DefaultAzureCredential credential = new(options);
             #endregion
+
+            #region "DEMO 4: VisualStudioCodeCredential"
+            //VisualStudioCodeCredential credential = new(
+            //    new VisualStudioCodeCredentialOptions
+            //    {
+            //        TenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID"),
+            //    });
+            #endregion
 #elif MACCATALYST
             // Get the parent window handle for MAUI on Mac Catalyst
             Microsoft.Maui.Controls.Window? parentWindow = this.GetParentWindow();
