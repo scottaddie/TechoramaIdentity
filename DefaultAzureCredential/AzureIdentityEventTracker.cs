@@ -27,10 +27,11 @@ public sealed class AzureIdentityEventTracker : IDisposable
             switch (args.EventName)
             {
                 // NOTE: These events don't run on subsequent token requests because the selected credential is cached
-                case "DefaultAzureCredentialCredentialSelected":
+                case "GetTokenSucceeded":
                     _credentialSelection = ExtractCredentialName(message);
+                    _events.Add($"{args.EventName}: {message}");
                     break;
-                case "GetToken" or "GetTokenFailed" or "GetTokenSucceeded":
+                case "GetToken" or "GetTokenFailed":
                     _events.Add($"{args.EventName}: {message}");
                     break;
             }
@@ -41,8 +42,8 @@ public sealed class AzureIdentityEventTracker : IDisposable
 
     private static string ExtractCredentialName(string message)
     {
-        const string prefix = "Azure.Identity.";
-        int index = message.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
-        return index >= 0 ? message.Substring(index + prefix.Length) : message;
+        const string suffix = ".GetToken succeeded.";
+        int index = message.IndexOf(suffix, StringComparison.OrdinalIgnoreCase);
+        return index >= 0 ? message.Substring(0, index) : message;
     }
 }
