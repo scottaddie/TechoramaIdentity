@@ -35,15 +35,23 @@ public partial class MainPage : ContentPage
         ErrorLabel.IsVisible = false;
         RetrieveSecretBtn.IsEnabled = false;
 
+        string? account = null;
         StringBuilder sb = new();
 
         using AzureEventSourceListener listener = new((args, message) =>
         {
-            if (args is {
-                EventSource.Name: "Azure-Identity",
-                EventName: "GetToken" or "GetTokenFailed" or "GetTokenSucceeded" //or "LogMsalInformational"
-            })
-                sb.AppendLine(message);
+            if (args is { EventSource.Name: "Azure-Identity" })
+            {
+                switch (args.EventName)
+                {
+                    case "AuthenticatedAccountDetails":
+                        account = ExtractAccountName(message);
+                        break;
+                    case "GetToken" or "GetTokenFailed" or "GetTokenSucceeded": //or "LogMsalInformational":
+                        sb.AppendLine(message);
+                        break;
+                }
+            }
         }, EventLevel.Informational);
 
         try
@@ -61,6 +69,12 @@ public partial class MainPage : ContentPage
 
                 // Equivalent to using BrokerCredential via DAC
                 //UseDefaultBrokerAccount = true,
+
+                Diagnostics =
+                {
+                    // enable to see authenticated account name
+                    IsAccountIdentifierLoggingEnabled = true,
+                },
             };
 
             InteractiveBrowserCredential credential = new(options);
@@ -90,6 +104,7 @@ public partial class MainPage : ContentPage
             ResultLabel.Text = $"✅ Secret '{SecretName}' retrieved successfully!\n" +
                               $"🔑 Value: {secret.Value}\n" +
                               $"📅 Created: {secret.Properties.CreatedOn:yyyy-MM-dd HH:mm:ss}\n" +
+                              $"🧑‍🦲 Account: {account}\n" +
                               $"🔍 Logs:\n {sb}";
             ResultLabel.IsVisible = true;
 
@@ -134,5 +149,22 @@ public partial class MainPage : ContentPage
             LoadingIndicator.IsRunning = false;
             RetrieveSecretBtn.IsEnabled = true;
         }
+    }
+
+    private static string ExtractAccountName(string message)
+    {
+        const string prefix = "User Principal Name: ";
+        int index = message.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
+        
+        if (index >= 0)
+        {
+            int startIndex = index + prefix.Length;
+            string remaining = message.Substring(startIndex);
+            int spaceIndex = remaining.IndexOf(' ');
+            
+            return spaceIndex >= 0 ? remaining.Substring(0, spaceIndex) : remaining;
+        }
+        
+        return message;
     }
 }
