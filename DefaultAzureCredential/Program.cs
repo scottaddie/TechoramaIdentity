@@ -5,8 +5,10 @@ using Azure.Identity;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAzureClients(configureClients: c =>
 {
-    IConfigurationSection keyVaultConfig = builder.Configuration.GetSection("Azure:KeyVault");
-    IConfigurationSection storageConfig = builder.Configuration.GetSection("Azure:Storage");
+    IConfigurationSection keyVaultConfig = 
+        builder.Configuration.GetSection("Azure:KeyVault");
+    IConfigurationSection storageConfig = 
+        builder.Configuration.GetSection("Azure:Storage");
 
     c.AddSecretClient(keyVaultConfig);
     c.AddBlobServiceClient(storageConfig);
