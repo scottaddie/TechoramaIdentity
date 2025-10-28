@@ -4,7 +4,8 @@ using IdentityPlayground.WebApi;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAzureClients(configureClients: c =>
 {
-    IConfigurationSection keyVaultConfig = builder.Configuration.GetSection("Azure:KeyVault");
+    IConfigurationSection keyVaultConfig = 
+        builder.Configuration.GetSection("Azure:KeyVault");
 
     c.AddSecretClient(keyVaultConfig);
 });
